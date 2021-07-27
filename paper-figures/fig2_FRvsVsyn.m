@@ -3,6 +3,8 @@
 
 load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig2.mat')
 
+Fs=10000; % sampling frequency (Hz)
+
 % break the membrane potential recordings into segments based on the synaptic threshold
 Vseg=cell(1,16); Vth1=cell(1,16);
 for j = 1:numel(hco.V1)
@@ -17,15 +19,18 @@ Vseg{1}{2}(12)=[]; Vseg{1}{2}(11)=[];
 % remove repeated -54mV threhold in the middle
 Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];   
 
- %% calculate HCO characteristcs as a function of the synaptic threhold
- hcostat=[]; ERQ=[];
- for j = 1:length(folder) %experiment number
+ %% calculate half-center output characteristcs as a function of the synaptic threhold
+ 
+ hcostat=cell(1,numel(hco.V1)); ERQ=cell(1,numel(hco.V1));
+ 
+ for j = 1:numel(hco.V1) %experiment number
      j
      for ii = 1:2 % neuron number
-         for i = 1:length(Vseg{j}{ii}) % # of Vth            
+         for i = 1:length(Vseg{j}{ii}) % # of Vth
              if ~isempty(Vseg{j}{ii}{i})==1 && length(Vseg{j}{ii}{i})>10*Fs(j)
                  V = Vseg{j}{ii}{i}(5*Fs(j):end);
-                 ERQ{j}{ii}(i) = (mean(V)-Vth1{j}(i))/mean(V);
+                 ERQ{j}{ii}(i) = analysis.erq(V, Vth1{j}(i));
+                 %ERQ{j}{ii}(i) = (mean(V)-Vth1{j}(i))/mean(V);
                  [hcostat{j}{ii}{i}] = hco_stat(V, Fs(j));
              else
                  hcostat{j}{ii}{i} = [];  ERQ{j}{ii}(i) = NaN;
@@ -35,47 +40,57 @@ Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];
  end
 
  %% calulate burst frequency
- FR=[]; T=[]; A=[]; SpkFR=[]; Nspks=[]; DC=[]; burststat=[]; st=[];
- for j=1:length(folder) % experiment
-     for ii=1:2 % neurons number
+ 
+ FR = cell(1,numel(hco.V1)); A = cell(1,numel(hco.V1));
+ SpkFR = cell(1,numel(hco.V1)); Nspks = cell(1,numel(hco.V1));
+ DC = cell(1,numel(hco.V1));
+ 
+ for j = 1:numel(hco.V1) % experiment
+     for ii = 1:2 % neuron number
          for i = 1:length(Vseg{j}{ii}) % # of Vth
              if ~isempty(hcostat{j}{ii}{i})
-             FR{j}{ii}(i) = 1./hcostat{j}{ii}{i}.T1_mean; % cycle frequency
-             T{j}{ii}(i) = hcostat{j}{ii}{i}.T1_mean; % cycle period
-             A{j}{ii}(i) = hcostat{j}{ii}{i}.A; % amplitude
-             SpkFR{j}{ii}(i) = hcostat{j}{ii}{i}.SpkFreq_mean; % spike frequency
-             Nspks{j}{ii}(i) = hcostat{j}{ii}{i}.nSpks_mean; % # spks/burst
-             DC{j}{ii}(i) = hcostat{j}{ii}{i}.dc_mean; % #duty cycle
-             burststat{j}{ii}{i} = hcostat{j}{ii}{i}.burststat; % #duty cycle
-             st{j}{ii}{i} = hcostat{j}{ii}{i}.st; % #duty cycle
+                 FR{j}{ii}(i) = 1./hcostat{j}{ii}{i}.T1_mean; % cycle frequency
+                 A{j}{ii}(i) = hcostat{j}{ii}{i}.A; % slow-wave amplitude
+                 SpkFR{j}{ii}(i) = hcostat{j}{ii}{i}.SpkFreq_mean; % spike frequency
+                 Nspks{j}{ii}(i) = hcostat{j}{ii}{i}.nSpks_mean; % # spikes/burst
+                 DC{j}{ii}(i) = hcostat{j}{ii}{i}.dc_mean; % #duty cycle
              else
-             FR{j}{ii}(i)=NaN; T{j}{ii}(i)=NaN;  A{j}{ii}(i)=NaN;
-             SpkFR{j}{ii}(i)=NaN; Nspks{j}{ii}(i)=NaN; DC{j}{ii}(i)=NaN;
-             st{j}{ii}{i}=[]; burststat{j}{ii}{i}=[]; 
+                 FR{j}{ii}(i)=NaN; A{j}{ii}(i)=NaN;
+                 SpkFR{j}{ii}(i)=NaN; Nspks{j}{ii}(i)=NaN; DC{j}{ii}(i)=NaN;
              end
          end
      end
  end
 
-%% calculate all the measures across two neurons
-FRmean=[]; Amean=[]; SpkFRmean=[]; Nspksmean=[]; DCmean=[]; ERQmean=[];
-for j = 1:length(folder) % experiment
+%% calculate ERQ across two neursons
+
+ERQmean = cell(1,numel(hco.V1));
+
+for j = 1:numel(hco.V1) % experiment
     for i = 1:length(Vseg{j}{1}) % # of Vth
-        FRmean{j}(i)=nanmean([FR{j}{1}(i),FR{j}{2}(i)]);
-        Amean{j}(i)=nanmean([A{j}{1}(i),A{j}{2}(i)]);
-        SpkFRmean{j}(i)=nanmean([SpkFR{j}{1}(i),SpkFR{j}{2}(i)]);
-        Nspksmean{j}(i)=nanmean([Nspks{j}{1}(i),Nspks{j}{2}(i)]);        
-        DCmean{j}(i)=nanmean([DC{j}{1}(i),DC{j}{2}(i)]);     
-        ERQmean{j}(i)=nanmean([ERQ{j}{1}(i),ERQ{j}{2}(i)]);
+        ERQmean{j}(i) = nanmean([ERQ{j}{1}(i),ERQ{j}{2}(i)]);
     end
     % if the circuit not a half-center set measures to NaN
-    Amean{j}(isinf(FRmean{j}))=NaN;
-    Nspksmean{j}(isinf(FRmean{j}))=NaN;
-    SpkFRmean{j}(isinf(FRmean{j}))=NaN;
-    DCmean{j}(isinf(FRmean{j}))=NaN;
-    ERQmean{j}(isinf(FRmean{j}))=NaN;
+    ERQmean{j}(isinf(FR{j}{1} | isinf(FR{j}{2}))) = NaN;
 end
-%% plot ERQ vs Vth
+
+%% plot example traces
+clf
+i=15; ii=[3,5,7,9,10]; k=1;
+for jj=[1:5] % 5 traces
+    for n=1:2 % neuron
+    x=1/Fs:1/Fs:length(Vseg{i}{n}{ii(k)}(Fs*5:end))/Fs;
+    subplot(4,5,1+5*(n-1)+(k-1))
+    plot(x,Vseg{i}{n}{ii(k)}(Fs*5:end),'color','k','linewidth',1)
+    if n==1; title(['Control, Vth = ',num2str(Vth1{i}(ii(k))), 'mV']); end
+    ylim([ylim1 ylim2]); xlim([xlim1 xlim2]);
+    set(gca, 'Fontsize',16,'FontName','Arial'); box off
+    h=display.plothorzline(Vth1{i}(ii(k))); set(h,'color','k','linewidth',1), hold on
+    end
+    k=k+1;
+end
+
+%% plot ERQ vs Vth and fit a sigmoidal function
 clf
 subplot(1,2,1) % plot example ERQ and fit sigmoidal function
 plot(Vth1{16},ERQmean{16},'.-','markersize',20,'linewidth',1.6,'color','k'), hold on
@@ -104,6 +119,8 @@ text(-53,0.17,['N=',num2str(length(folder))],'Fontsize',16,'FontName','Arial')
 yticks([-0.1:0.05:0.2]); xticks([-54:2:-34])
 ylabel('ERQ'); xlabel('Synaptic threshold (V_{th}), mV')
 set(gca,'Fontsize',16,'FontName','Arial')
+
+
 %% interpolate all the measures so that they are in the same boundaries (-54 to -28)
 Vthint=[]; FRint=[]; Aint=[]; DCint=[];  SpkFRint=[]; Nspksint=[]; ERQint=[];
 for n=1:2 % neuron number
@@ -287,24 +304,3 @@ set(gcf,'Units','Inches');
 pos = get(gcf,'Position');
 set(gcf,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
 print(gcf,'map_transition','-dpdf','-r0')
-%% plot example traces
-clf
-i=15;
-ylim1=-65; ylim2=-5; xlim1=0; xlim2=40;
-ii=[3,5,7,9,10]; k=1;
-for jj=[1:5]
-    j=1; n=1; x=1/Fs(i):1/Fs(i):length(Vseg{i}{n}{ii(k)}(Fs(i)*5:end))/Fs(i);
-    subtightplot(2,5,1+(k-1),g,l,l), plot(x,Vseg{i}{n}{ii(k)}(Fs(i)*5:end),'color','k','linewidth',1)
-    title([ 'Control, Vth = ',num2str(Vth1{i}(ii(k))), 'mV']);
-    ylim([ylim1 ylim2]); xlim([xlim1 xlim2]);
-    set(gca, 'Fontsize',16,'FontName','Arial'); box off
-    h=mmyplothorzline(Vth1{i}(ii(k))); set(h,'color','k','linewidth',1), hold on
-    
-    j=1; n=2; x=1/Fs(i):1/Fs(i):length(Vseg{i}{n}{ii(k)}(Fs(i)*5:end))/Fs(i);
-    subtightplot(2,5,6+(k-1),g,l,l), plot(x,Vseg{i}{n}{ii(k)}(Fs(i)*5:end),'color','k','linewidth',1)
-    title([ 'Control, Vth = ',num2str(Vth1{i}(ii(k))), 'mV']);
-    ylim([ylim1 ylim2]); xlim([xlim1 xlim2]); xlabel('Time, sec')
-    set(gca,'Fontsize',16,'FontName','Arial'); box off
-    h=mmyplothorzline(Vth1{i}(ii(k))); set(h,'color','k','linewidth',1), hold on
-    k=k+1;
-end
