@@ -65,13 +65,21 @@ for i=1:numel(data.V)
 end
 
 
+<<<<<<< HEAD
 %% calculate mean and std for each HCO property
 
+=======
+%%
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
 ie=find(data.mode=="escape");
 ir=find(data.mode=="release");
 iq1=find(data.Q10==11);
 iq2g=find(data.Q10==21);
 iq2=find(data.Q10==22);
+<<<<<<< HEAD
+=======
+%% calculate mean and std for each HCO property
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
 
 dperprop=[dperFR; dperSpkFR; dperA; dperNspks; dperdc; dperERQ1];
 
@@ -80,7 +88,11 @@ idxrq1=intersect(ir,iq1); idxrq2g=intersect(ir,iq2g); idxrq2=intersect(ir,iq2);
 
 meanprop=[]; errorprop=[];
 
+<<<<<<< HEAD
 for i=1:size(dperprop,1)
+=======
+for i=1:size(dperall,1)
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
     meanprop(i,:)=[mean(dperprop(i,idxeq1)), mean(dperprop(i,idxeq2g)),...
         mean(dperprop(i,idxeq2)), mean(dperprop(i,idxrq1)),...
         mean(dperprop(i,idxrq2g)),mean(dperprop(i,idxrq2)),];
@@ -98,9 +110,15 @@ groupIdx = [ones(size(idxeq1))'; 2*ones(size(idxeq2g))';...
 
 stats=[]; pvalsig=[]; sigpoints=[];
 
+<<<<<<< HEAD
 for i=1%:size(dperprop,1)
     
     [p(i),tbl{i},stats{i}]=anova1(dperprop(i,:)',groupIdx');
+=======
+for i=1:size(dperall,1)
+    
+    [~,~,stats{i}]=anova1(dperprop(i,:)',groupIdx');
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
     comp=multcompare(stats{i})
     group=(comp(:,1:2));
     hcomp=comp(:,6)<0.05;
@@ -109,12 +127,18 @@ for i=1%:size(dperprop,1)
     groups{i}=(num2cell(sigpoints{i},2));
     
 end
+<<<<<<< HEAD
 
 %% plot percent change in all the measures
 clf
 
 color = {[0.36,0.42,0.6],[0.6,0.4,1],[0.36,0.23,0.6],[0.8, 0.6, 0],[0.8, 0.3, 0],[0.5, 0, 0]};
 symbol = {'o','o','o','s','s','s'};
+=======
+%% plot percent change in all the measures
+clf
+color = {[0.36,0.42,0.6],[0.6,0.4,1],[0.36,0.23,0.6],[0.8, 0.6, 0],[0.8, 0.3, 0],[0.5, 0, 0]};
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
 
 for i = 1:3 %size(dperall,1)
     %bigsubplot(1,size(dperall,1),1,i, 0.03, 0.05)
@@ -160,7 +184,11 @@ for i = 1:3 %size(dperall,1)
     set(groot,{'DefaultAxesXColor','DefaultAxesYColor','DefaultAxesZColor'},{'k','k','k'})
 end
 
+<<<<<<< HEAD
 for i = 4:size(dperprop,1)
+=======
+for i = 4:size(dperall,1)
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
     %bigsubplot(1,size(dperall,1),1,i, 0.03, 0.05)
     bigsubplot(2,3,2,i-3, 0.03, 0.06)
     display.plot_barerror(meanprop(i,:),errprop(i,:),'color',color); hold on
@@ -184,7 +212,11 @@ for i = 4:size(dperprop,1)
     elseif i==4
         title('% change in # spikes/burst')
         ylabel('% \Delta in # of spikes/burst');
+<<<<<<< HEAD
         ylim([-55 360])
+=======
+        ylim([-40 360])
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
     elseif i==5
         title('% change in duty cycle')
         ylabel('% \Delta in duty cycle');
@@ -203,7 +235,11 @@ end
 % Wilcoxon signed rank test (non parametric for paired samples)
 
 FRall = permute(FR,[1 3 2]); FRall = reshape(FRall,[],size(A,2),1);
+<<<<<<< HEAD
 SpkFRall = permute(SpkFR,[1 3 2]); SpkFRall = reshape(SpkFRall,[],size(A,2),1);
+=======
+SpkFRall = permute(SpkFR,[1 3 2]); SpkFRall = reshape(SpkFR1,[],size(A,2),1);
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
 Nspksall = permute(Nspks,[1 3 2]); Nspksall = reshape(Nspksall,[],size(A,2),1);
 Aall = permute(A,[1 3 2]); Aall = reshape(Aall,[],size(A,2),1);
 dcall = permute(dc,[1 3 2]); dcall = reshape(dcall,[],size(A,2),1);
@@ -213,6 +249,7 @@ prop=[FRall, SpkFRall, Aall, Nspksall, dcall, ERQall];
 
 for i=1:size(prop,2)/2
     
+<<<<<<< HEAD
     p_eq1(i) = signrank(prop(idxeq1(1):idxeq1(end)+numel(idxeq1),(i-1)*2+1),prop(idxeq1(1):idxeq1(end)+numel(idxeq1),i*2));
     p_eq2g(i) = signrank(prop(idxeq2g(1):idxeq2g(end)+numel(idxeq2g),(i-1)*2+1),prop(idxeq2g(1):idxeq2g(end)+numel(idxeq2g),i*2));
     p_eq2(i) = signrank(prop(idxeq2(1):idxeq2(end)+numel(idxeq2),(i-1)*2+1),prop(idxeq2(1):idxeq2(end)+numel(idxeq2),i*2));
@@ -220,5 +257,14 @@ for i=1:size(prop,2)/2
     p_rq1(i) = signrank(prop(idxrq1(1):idxrq1(end)+numel(idxrq1),(i-1)*2+1),prop(idxrq1(1):idxrq1(end)+numel(idxrq1),i*2));
     p_rq2g(i) = signrank(prop(idxrq2g(1):idxrq2g(end)+numel(idxrq2g),(i-1)*2+1),prop(idxrq2g(1):idxrq2g(end)+numel(idxrq2g),i*2));
     p_rq2(i) = signrank(prop(idxrq2(1):idxrq2(end)+numel(idxrq2),(i-1)*2+1),prop(idxrq2(1):idxrq2(end)+numel(idxrq2),i*2));
+=======
+    p_eq1(i) = signrank(prop(idxeq1(1):idxeq1(end)*2,(i-1)*2+1),prop(idxeq1(1):idxeq1(end)*2,i*2));
+    p_eq2g(i) = signrank(prop(idxeq2g(1):idxeq2g(end)*2,(i-1)*2+1),prop(idxeq2g(1):idxeq2g(end)*2,i*2));
+    p_eq2(i) = signrank(prop(idxeq2(1):idxeq2(end)*2,(i-1)*2+1),prop(idxeq2(1):idxeq2(end)*2,i*2));
+    
+    p_rq1(i) = signrank(prop(idxrq1(1):idxrq1(end)*2,(i-1)*2+1),prop(idxrq1(1):idxrq1(end)*2,i*2));
+    p_rq2g(i) = signrank(prop(idxrq2g(1):idxrq2g(end)*2,(i-1)*2+1),prop(idxrq2g(1):idxrq2g(end)*2,i*2));
+    p_rq2(i) = signrank(prop(idxrq2(1):idxrq2(end)*2,(i-1)*2+1),prop(idxrq2(1):idxrq2(end)*2,i*2));
+>>>>>>> c33242bfa7662132ff023fc62bf48056dd63a004
     
 end
