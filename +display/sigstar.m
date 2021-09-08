@@ -179,7 +179,7 @@ hold on
 H=ones(length(groups),2); %The handles will be stored here
 
 y=ylim;
-yd=myRange(y)*0.05; %separate sig bars vertically by 5% 
+yd=range(y)*0.05; %separate sig bars vertically by 5% 
 
 for ii=1:length(groups)
 	thisY=findMinY(xlocs(ii,:))+yd;
@@ -195,7 +195,7 @@ end
 %of the graph have changed as we add the highlights. The ticks are set as a
 %proportion of the y axis range and we want them all to be the same the same
 %for all bars.
-yd=myRange(ylim)*0.01; %Ticks are 1% of the y axis range
+yd=range(ylim)*0.01; %Ticks are 1% of the y axis range
 for ii=1:length(groups)
 	y=get(H(ii,1),'YData');
 	y(1)=y(1)-yd;
@@ -238,14 +238,14 @@ elseif p<=1E-2
 	stars='**';
 elseif p<=0.05
 	stars='*';
-elseif isnan(p)
+elseif isnan(p) %|| p>0.05
 	stars='n.s.';
 else
 	stars='';
 end
 		
-x=repmat(x,2,1)
-y=repmat(y,4,1)
+x=repmat(x,2,1);
+y=repmat(y,4,1);
 
 H(1)=plot(x(:),y,'-k','LineWidth',1.5);
 
@@ -257,7 +257,7 @@ else
     offset=0.02;
 end
 
-H(2)=text(mean(x(:)),mean(y)+myRange(ylim)*offset,stars,...
+H(2)=text(mean(x(:)),mean(y)+range(ylim)*offset,stars,...
    	'HorizontalAlignment','Center',...
    	'BackGroundColor','none');
 
@@ -272,16 +272,9 @@ function Y=findMinY(x)
 %
 
 %First look for patch objects (bars in a bar-chart, most likely)
-if verLessThan('matlab','8.4.0')
-	p=findobj(gca,'Type','Patch');
-	xd=get(p,'XData');
-else
-	p=findobj(gca,'Type','bar')
-	xd=p.XData;
-end
-
-
-if iscell(xd) & verLessThan('matlab','8.4.0')
+p=findobj(gca,'Type','Patch');
+xd=get(p,'XData');
+if iscell(xd)
 	xd=groupedBarFix(xd,'x');
 end
 
@@ -291,16 +284,11 @@ xd(xd>x(2))=0;
 overlapping=any(xd,1); %These x locations overlap
 
 %Find the corresponding y values 
-if verLessThan('matlab','8.4.0')
-	yd=get(p,'YData');
-else
-	yd=p.YData;
-end
-
-if iscell(yd) & verLessThan('matlab','8.4.0')
+clear xd
+yd=get(p,'YData');
+if iscell(yd)
 	yd=groupedBarFix(yd,'y');
 end
-
 yd=yd(:,overlapping);
 
 %So we must have a value of at least Y in order to miss all the 
@@ -356,8 +344,3 @@ function out=groupedBarFix(in,xy)
 	case 'y'
 		out=max(out,[],3);
     end
-
-
-%replacement for stats toolbox range function
-function rng=myRange(x)
-  rng = max(x) - min(x);
