@@ -85,9 +85,9 @@ clf
 i=15; ii=[3,5,7,9,10]; k=1;
 for jj=[1:5] % 5 traces
     for n=1:2 % neuron
-    x=1/Fs:1/Fs:length(Vseg{i}{n}{ii(k)}(Fs*5:end))/Fs;
+    x=1/Fs(j):1/Fs(j):length(Vseg{i}{n}{ii(k)}(Fs(j)*5:end))/Fs(j);
     subplot(4,5,1+5*(n-1)+(k-1))
-    plot(x,Vseg{i}{n}{ii(k)}(Fs*5:end),'color','k','linewidth',1)
+    plot(x,Vseg{i}{n}{ii(k)}(Fs(j)*5:end),'color','k','linewidth',1)
     if n==1; title(['Vth = ',num2str(Vth1{i}(ii(k))), 'mV']); end
     ylim([-60 -10]); xlim([0 26]);
     set(gca, 'Fontsize',14,'FontName','Arial'); box off
@@ -108,6 +108,7 @@ set(gca,'Fontsize',16,'FontName','Arial')
 
 %x=Vth1{i}(~isnan(ERQmean{i}));
 x = [-52:0.2:-36];
+ERQmeanint = interp1(Vth1{i},ERQmean{i},x); % interpolate
 f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
 [p,R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
 %fitnlm(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,p);
@@ -118,12 +119,14 @@ hold on, plot(x(1:end-2),1000*diff(diff(f(p,x))),'linewidth',2,'color','r')
 [~,thr] = (min(1000*diff(diff(f(p,x)))));
 hold on, display.plotvertline(x(the));
 hold on, display.plotvertline(x(thr));
+hold on, display.plothorzline(ERQmeanint(the));
+hold on, display.plothorzline(ERQmeanint(thr));
 title('951-060')
 
 col=display.linspecer(length(Vth1));
 %col = cbrewer('qual','Set1',length(Vth1)); 
 subplot(1,2,2) % all tje data
-for i = 1%:numel(hco.V1) % experiment %[4,5,10,12,13,15,16,14]
+for i = 1:numel(hco.V1) % experiment 
 plot(Vth1{i},ERQmean{i},'.-','markersize',20,'linewidth',1.6,'color',col(i,:,:)), hold on
 ylim([-0.1 0.2]); xlim([-54 -32])
 end
@@ -139,9 +142,20 @@ x = [-52:0.2:-36];
 f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
 for i=1:numel(hco.V1)
     [p(i,:),R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
-[~,the(i)] = (max(1000*diff(diff(f(p(i,:),x)))));
-[~,thr(i)] = (min(1000*diff(diff(f(p(i,:),x)))));
+    ERQmeanint(i,:) = interp1(Vth1{i},ERQmean{i},x); % interpolate
+    [~,the(i)] = (max(1000*diff(diff(f(p(i,:),x)))));
+    [~,thr(i)] = (min(1000*diff(diff(f(p(i,:),x)))));
+    Vthe(i)=x(the(i));
+    Vthr(i)=x(thr(i));
+    ERQthe(i)=ERQmeanint(i,the(i));
+    ERQthr(i)=ERQmeanint(i,thr(i));
 end
+
+meanERQthe=mean(ERQthe); stdERQthe=std(ERQthe);
+meanERQthr=mean(ERQthr); stdERQthr=std(ERQthr);
+
+
+
 
 %% interpolate all the measures so that they are in the same boundaries (-54 to -28)
 
