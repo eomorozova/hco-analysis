@@ -1,18 +1,26 @@
 
-% load data for figure 2
+% load the data for figure 2
 
 load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig2.mat')
 
-Fs=10000; % sampling frequency (Hz)
+%% divide the membrane potential recordings into segments based on the synaptic threshold
 
-% break the membrane potential recordings into segments based on the synaptic threshold
+for j = 1:numel(hco.V1) % experiment
+    if j==7
+        Fs(j)=1000; % sampling frequency (Hz)
+    else
+        Fs(j)=10000; % sampling frequency (Hz)
+    end
+end
+
 Vseg=cell(1,16); Vth1=cell(1,16);
+
 for j = 1:numel(hco.V1)
     [Vseg{j}{1},Vth1{j}] = analysis.Vsegments(hco.V1{j},hco.Vth{j});
     [Vseg{j}{2},Vth1{j}] = analysis.Vsegments(hco.V2{j},hco.Vth{j});
 end
 
-% cleanup the dataset -> remove two extra repeated thresholds
+% cleanup the data -> remove two extra repeated thresholds
 Vth1{1}(11:12)=[];
 Vseg{1}{1}(12)=[]; Vseg{1}{1}(11)=[];
 Vseg{1}{2}(12)=[]; Vseg{1}{2}(11)=[];
@@ -23,14 +31,13 @@ Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];
  
  hcostat=cell(1,numel(hco.V1)); ERQ=cell(1,numel(hco.V1));
  
- for j = 1:numel(hco.V1) %experiment number
+ for j = 1:numel(hco.V1) % experiment 
      j
      for ii = 1:2 % neuron number
          for i = 1:length(Vseg{j}{ii}) % # of Vth
              if ~isempty(Vseg{j}{ii}{i})==1 && length(Vseg{j}{ii}{i})>10*Fs(j)
                  V = Vseg{j}{ii}{i}(5*Fs(j):end);
                  ERQ{j}{ii}(i) = analysis.erq(V, Vth1{j}(i));
-                 %ERQ{j}{ii}(i) = (mean(V)-Vth1{j}(i))/mean(V);
                  [hcostat{j}{ii}{i}] = hco_stat(V, Fs(j));
              else
                  hcostat{j}{ii}{i} = [];  ERQ{j}{ii}(i) = NaN;
@@ -39,8 +46,6 @@ Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];
      end
  end
 
- %% calulate burst frequency
- 
  FR = cell(1,numel(hco.V1)); A = cell(1,numel(hco.V1));
  SpkFR = cell(1,numel(hco.V1)); Nspks = cell(1,numel(hco.V1));
  DC = cell(1,numel(hco.V1));
@@ -62,7 +67,7 @@ Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];
      end
  end
 
-%% calculate ERQ across two neursons
+%% calculate ERQ across two neursons in a circuit
 
 ERQmean = cell(1,numel(hco.V1));
 
@@ -70,11 +75,12 @@ for j = 1:numel(hco.V1) % experiment
     for i = 1:length(Vseg{j}{1}) % # of Vth
         ERQmean{j}(i) = nanmean([ERQ{j}{1}(i),ERQ{j}{2}(i)]);
     end
-    % if the circuit not a half-center set measures to NaN
-    ERQmean{j}(isinf(FR{j}{1} | isinf(FR{j}{2}))) = NaN;
+    % if the circuit is not a half-center set ERQ to NaN
+    ERQmean{j}(isinf(FR{j}{1}) | isinf(FR{j}{2})) = NaN;
 end
 
-%% plot example traces
+%% plot example traces (Figure 2A)
+
 clf
 i=15; ii=[3,5,7,9,10]; k=1;
 for jj=[1:5] % 5 traces
@@ -82,46 +88,63 @@ for jj=[1:5] % 5 traces
     x=1/Fs:1/Fs:length(Vseg{i}{n}{ii(k)}(Fs*5:end))/Fs;
     subplot(4,5,1+5*(n-1)+(k-1))
     plot(x,Vseg{i}{n}{ii(k)}(Fs*5:end),'color','k','linewidth',1)
-    if n==1; title(['Control, Vth = ',num2str(Vth1{i}(ii(k))), 'mV']); end
-    ylim([ylim1 ylim2]); xlim([xlim1 xlim2]);
-    set(gca, 'Fontsize',16,'FontName','Arial'); box off
-    h=display.plothorzline(Vth1{i}(ii(k))); set(h,'color','k','linewidth',1), hold on
+    if n==1; title(['Vth = ',num2str(Vth1{i}(ii(k))), 'mV']); end
+    ylim([-60 -10]); xlim([0 26]);
+    set(gca, 'Fontsize',14,'FontName','Arial'); box off
+    h=display.plothorzline(Vth1{i}(ii(k))); hold on
     end
     k=k+1;
 end
 
-%% plot ERQ vs Vth and fit a sigmoidal function
-clf
+%% plot ERQ vs Vth and fit a sigmoid function (Figure 2C)
+
+clf; i=15;
 subplot(1,2,1) % plot example ERQ and fit sigmoidal function
-plot(Vth1{16},ERQmean{16},'.-','markersize',20,'linewidth',1.6,'color','k'), hold on
-axis square
-ylim([-0.1 0.2]); xlim([-54 -32])
+plot(Vth1{i},ERQmean{i},'.','markersize',20,'linewidth',1.6,'color','k'), hold on
+axis square; ylim([-0.1 0.2]); xlim([-54 -34])
 yticks([-0.1:0.05:0.2]); xticks([-54:2:-34])
 ylabel('ERQ'); xlabel('Synaptic threshold (V_{th}), mV')
 set(gca,'Fontsize',16,'FontName','Arial')
-x=Vth1{i}(~isnan(ERQmean{i}));
-f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoidal function
-[p,R]= nlinfit(Vth1{16}(~isnan(ERQmean{16})),ERQmean{16}(~isnan(ERQmean{16})),f,[-0.08 0.25 -44 3])
-fitnlm(Vth1{16}(~isnan(ERQmean{16})),ERQmean{16}(~isnan(ERQmean{16})),f,[-0.08 0.25])
+
+%x=Vth1{i}(~isnan(ERQmean{i}));
+x = [-52:0.2:-36];
+f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
+[p,R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
+%fitnlm(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,p);
 
 hold on, plot(x,f(p,x),'linewidth',2,'color','c')
+hold on, plot(x(1:end-2),1000*diff(diff(f(p,x))),'linewidth',2,'color','r')
+[~,the] = (max(1000*diff(diff(f(p,x)))));
+[~,thr] = (min(1000*diff(diff(f(p,x)))));
+hold on, display.plotvertline(x(the));
+hold on, display.plotvertline(x(thr));
 title('951-060')
 
-%col=linspecer(length(Vth1));
-col = cbrewer('qual','Set1',length(Vth1)); 
+col=display.linspecer(length(Vth1));
+%col = cbrewer('qual','Set1',length(Vth1)); 
 subplot(1,2,2) % all tje data
-for i = 1:length(folder) %[4,5,10,12,13,15,16,14]
+for i = 1%:numel(hco.V1) % experiment %[4,5,10,12,13,15,16,14]
 plot(Vth1{i},ERQmean{i},'.-','markersize',20,'linewidth',1.6,'color',col(i,:,:)), hold on
 ylim([-0.1 0.2]); xlim([-54 -32])
 end
 axis square
-text(-53,0.17,['N=',num2str(length(folder))],'Fontsize',16,'FontName','Arial')
+text(-53,0.17,['N=',num2str(numel(hco.V1))],'Fontsize',16,'FontName','Arial')
 yticks([-0.1:0.05:0.2]); xticks([-54:2:-34])
 ylabel('ERQ'); xlabel('Synaptic threshold (V_{th}), mV')
 set(gca,'Fontsize',16,'FontName','Arial')
 
+%% fit sigmoid function to ERQ vs Vth plot for each experiment
+
+x = [-52:0.2:-36];
+f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
+for i=1:numel(hco.V1)
+    [p(i,:),R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
+[~,the(i)] = (max(1000*diff(diff(f(p(i,:),x)))));
+[~,thr(i)] = (min(1000*diff(diff(f(p(i,:),x)))));
+end
 
 %% interpolate all the measures so that they are in the same boundaries (-54 to -28)
+
 Vthint=[]; FRint=[]; Aint=[]; DCint=[];  SpkFRint=[]; Nspksint=[]; ERQint=[];
 for n=1:2 % neuron number
     for i = 1:length(folder) % experiment
