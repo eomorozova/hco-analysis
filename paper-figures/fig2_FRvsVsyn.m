@@ -5,19 +5,13 @@ load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig2.mat')
 
 %% divide the membrane potential recordings into segments based on the synaptic threshold
 
-for j = 1:numel(hco.V1) % experiment
-    if j==7
-        Fs(j)=1000; % sampling frequency (Hz)
-    else
-        Fs(j)=10000; % sampling frequency (Hz)
-    end
-end
+N = numel(data.V1); % number of experiments
 
-Vseg=cell(1,16); Vth1=cell(1,16);
+Vseg=cell(1,N); Vth1=cell(1,N);
 
-for j = 1:numel(hco.V1)
-    [Vseg{j}{1},Vth1{j}] = analysis.Vsegments(hco.V1{j},hco.Vth{j});
-    [Vseg{j}{2},Vth1{j}] = analysis.Vsegments(hco.V2{j},hco.Vth{j});
+for j = 1:N
+    [Vseg{j}{1},Vth1{j}] = analysis.Vsegments(data.V1{j},data.Vth{j});
+    [Vseg{j}{2},Vth1{j}] = analysis.Vsegments(data.V2{j},data.Vth{j});
 end
 
 % cleanup the data -> remove two extra repeated thresholds
@@ -27,56 +21,56 @@ Vseg{1}{2}(12)=[]; Vseg{1}{2}(11)=[];
 % remove repeated -54mV threhold in the middle
 Vth1{2}(3)=[]; Vseg{2}{1}(3)=[];  Vseg{2}{2}(3)=[];   
 
- %% calculate half-center output characteristcs as a function of the synaptic threhold
+%% calculate half-center output characteristcs as a function of the synaptic threhold
  
- hcostat=cell(1,numel(hco.V1)); ERQ=cell(1,numel(hco.V1));
- 
- for j = 1:numel(hco.V1) % experiment 
-     j
-     for ii = 1:2 % neuron number
-         for i = 1:length(Vseg{j}{ii}) % # of Vth
-             if ~isempty(Vseg{j}{ii}{i})==1 && length(Vseg{j}{ii}{i})>10*Fs(j)
-                 V = Vseg{j}{ii}{i}(5*Fs(j):end);
-                 ERQ{j}{ii}(i) = analysis.erq(V, Vth1{j}(i));
-                 [hcostat{j}{ii}{i}] = hco_stat(V, Fs(j));
-             else
-                 hcostat{j}{ii}{i} = [];  ERQ{j}{ii}(i) = NaN;
-             end
-         end
-     end
- end
+hcostat=cell(1,N); ERQ=cell(1,N);
 
- FR = cell(1,numel(hco.V1)); A = cell(1,numel(hco.V1));
- SpkFR = cell(1,numel(hco.V1)); Nspks = cell(1,numel(hco.V1));
- DC = cell(1,numel(hco.V1));
- 
- for j = 1:numel(hco.V1) % experiment
-     for ii = 1:2 % neuron number
-         for i = 1:length(Vseg{j}{ii}) % # of Vth
-             if ~isempty(hcostat{j}{ii}{i})
-                 FR{j}{ii}(i) = 1./hcostat{j}{ii}{i}.T1_mean; % cycle frequency
-                 A{j}{ii}(i) = hcostat{j}{ii}{i}.A; % slow-wave amplitude
-                 SpkFR{j}{ii}(i) = hcostat{j}{ii}{i}.SpkFreq_mean; % spike frequency
-                 Nspks{j}{ii}(i) = hcostat{j}{ii}{i}.nSpks_mean; % # spikes/burst
-                 DC{j}{ii}(i) = hcostat{j}{ii}{i}.dc_mean; % #duty cycle
-             else
-                 FR{j}{ii}(i)=NaN; A{j}{ii}(i)=NaN;
-                 SpkFR{j}{ii}(i)=NaN; Nspks{j}{ii}(i)=NaN; DC{j}{ii}(i)=NaN;
-             end
-         end
-     end
- end
+for j = 1:N % experiment
+    j
+    for ii = 1:2 % neuron number
+        for i = 1:length(Vseg{j}{ii}) % # of Vth
+            if ~isempty(Vseg{j}{ii}{i})==1 && length(Vseg{j}{ii}{i})>10*data.Fs(j)
+                V = Vseg{j}{ii}{i}(5*data.Fs(j):end);
+                ERQ{j}{ii}(i) = analysis.erq(V, Vth1{j}(i));
+                [hcostat{j}{ii}{i}] = analysis.hco_stat(V, data.Fs(j));
+            else
+                hcostat{j}{ii}{i} = [];  ERQ{j}{ii}(i) = NaN;
+            end
+        end
+    end
+end
+
+FR = cell(1,N); A = cell(1,N); SpkFR = cell(1,N); Nspks = cell(1,N); DC = cell(1,N);
+SpkFR1 = cell(1,N);
+
+for j = 1:N % experiment
+    for ii = 1:2 % neuron number
+        for i = 1:length(Vseg{j}{ii}) % # of Vth
+            if ~isempty(hcostat{j}{ii}{i})
+                FR{j}{ii}(i) = 1./hcostat{j}{ii}{i}.T1_mean; % cycle frequency
+                A{j}{ii}(i) = hcostat{j}{ii}{i}.A; % slow-wave amplitude
+                SpkFR{j}{ii}(i) = hcostat{j}{ii}{i}.SpkFreq_mean; % spike frequency
+                SpkFR1{j}{ii}(i) = hcostat{j}{ii}{i}.SpkFreq_median; % spike frequency
+                Nspks{j}{ii}(i) = hcostat{j}{ii}{i}.nSpks_mean; % # spikes/burst
+                DC{j}{ii}(i) = hcostat{j}{ii}{i}.dc_mean; % #duty cycle
+            else
+                FR{j}{ii}(i)=NaN; A{j}{ii}(i)=NaN;
+                SpkFR{j}{ii}(i)=NaN; Nspks{j}{ii}(i)=NaN; DC{j}{ii}(i)=NaN;
+            end
+        end
+    end
+end
 
 %% calculate ERQ across two neursons in a circuit
 
-ERQmean = cell(1,numel(hco.V1));
+ERQmean = cell(1,N);
 
-for j = 1:numel(hco.V1) % experiment
+for j = 1:N % experiment
     for i = 1:length(Vseg{j}{1}) % # of Vth
         ERQmean{j}(i) = nanmean([ERQ{j}{1}(i),ERQ{j}{2}(i)]);
     end
     % if the circuit is not a half-center set ERQ to NaN
-    ERQmean{j}(isinf(FR{j}{1}) | isinf(FR{j}{2})) = NaN;
+    ERQmean{j}(isnan(FR{j}{1}) | isnan(FR{j}{2})) = NaN;
 end
 
 %% plot example traces (Figure 2A)
@@ -85,9 +79,11 @@ clf
 i=15; ii=[3,5,7,9,10]; k=1;
 for jj=[1:5] % 5 traces
     for n=1:2 % neuron
-    x=1/Fs(j):1/Fs(j):length(Vseg{i}{n}{ii(k)}(Fs(j)*5:end))/Fs(j);
+    x=1/data.Fs(j):1/data.Fs(j):length(Vseg{i}{n}{ii(k)}(data.Fs(j)*5:end))/data.Fs(j);
     subplot(4,5,1+5*(n-1)+(k-1))
-    plot(x,Vseg{i}{n}{ii(k)}(Fs(j)*5:end),'color','k','linewidth',1)
+    plot(x,Vseg{i}{n}{ii(k)}(data.Fs(j)*5:end),'color','k','linewidth',1)
+    Vmean = mean(Vseg{i}{n}{ii(k)}(data.Fs(j)*5:end));
+    hold on, h = display.plothorzline(Vmean); set(h,'linestyle','-')
     if n==1; title(['Vth = ',num2str(Vth1{i}(ii(k))), 'mV']); end
     ylim([-60 -10]); xlim([0 26]);
     set(gca, 'Fontsize',14,'FontName','Arial'); box off
@@ -111,7 +107,6 @@ x = [-52:0.2:-36];
 ERQmeanint = interp1(Vth1{i},ERQmean{i},x); % interpolate
 f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
 [p,R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
-%fitnlm(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,p);
 
 hold on, plot(x,f(p,x),'linewidth',2,'color','c')
 hold on, plot(x(1:end-2),1000*diff(diff(f(p,x))),'linewidth',2,'color','r')
@@ -121,47 +116,48 @@ hold on, display.plotvertline(x(the));
 hold on, display.plotvertline(x(thr));
 hold on, display.plothorzline(ERQmeanint(the));
 hold on, display.plothorzline(ERQmeanint(thr));
-title('951-060')
+title(data.folder(i,:))
 
-col=display.linspecer(length(Vth1));
-%col = cbrewer('qual','Set1',length(Vth1)); 
-subplot(1,2,2) % all tje data
-for i = 1:numel(hco.V1) % experiment 
-plot(Vth1{i},ERQmean{i},'.-','markersize',20,'linewidth',1.6,'color',col(i,:,:)), hold on
-ylim([-0.1 0.2]); xlim([-54 -32])
-end
-axis square
-text(-53,0.17,['N=',num2str(numel(hco.V1))],'Fontsize',16,'FontName','Arial')
-yticks([-0.1:0.05:0.2]); xticks([-54:2:-34])
-ylabel('ERQ'); xlabel('Synaptic threshold (V_{th}), mV')
-set(gca,'Fontsize',16,'FontName','Arial')
+% fit sigmoid function to ERQ vs Vth plot for each experiment
+x = cell(1,N); ERQmeanint = cell(1,N);
 
-%% fit sigmoid function to ERQ vs Vth plot for each experiment
-
-x = [-52:0.2:-36];
 f = @(F,x) F(1) + F(2)./(1+exp(-(x-F(3))./F(4))); % fit sigmoid function
-for i=1:numel(hco.V1)
+for i=1:N
+    x1 = Vth1{i}(~isnan(ERQmean{i}));
+    x{i} = [x1(1):0.2:x1(end)];
     [p(i,:),R]= nlinfit(Vth1{i}(~isnan(ERQmean{i})),ERQmean{i}(~isnan(ERQmean{i})),f,[-0.08 0.25 -44 3]);
-    ERQmeanint(i,:) = interp1(Vth1{i},ERQmean{i},x); % interpolate
-    [~,the(i)] = (max(1000*diff(diff(f(p(i,:),x)))));
-    [~,thr(i)] = (min(1000*diff(diff(f(p(i,:),x)))));
-    Vthe(i)=x(the(i));
-    Vthr(i)=x(thr(i));
-    ERQthe(i)=ERQmeanint(i,the(i));
-    ERQthr(i)=ERQmeanint(i,thr(i));
+    ERQmeanint{i} = interp1(Vth1{i},ERQmean{i},x{i}); % interpolate
+    [~,the(i)] = (max(1000*diff(diff(f(p(i,:),x{i})))));
+    [~,thr(i)] = (min(1000*diff(diff(f(p(i,:),x{i})))));
+    Vthe(i)=x{i}(the(i));
+    Vthr(i)=x{i}(thr(i));
+    ERQthe(i)=ERQmeanint{i}(the(i));
+    ERQthr(i)=ERQmeanint{i}(thr(i));
 end
 
 meanERQthe=mean(ERQthe); stdERQthe=std(ERQthe);
 meanERQthr=mean(ERQthr); stdERQthr=std(ERQthr);
 
+col = colormaps.cbrewer('qual','Set1',length(Vth1)); 
+subplot(1,2,2) % all the data
+for i = 1:N % experiment 
+plot(Vth1{i},ERQmean{i},'.','markersize',20,'linewidth',1.6,'color',col(i,:,:)), hold on
+plot(x{i},f(p(i,:),x{i}),'linewidth',2,'color',col(i,:,:))
+ylim([-0.1 0.2]); xlim([-54 -33.8])
+end
+axis square
+text(-53,0.17,['N=',num2str(N)],'Fontsize',16,'FontName','Arial')
+yticks([-0.1:0.05:0.2]); xticks([-54:2:-34])
+ylabel('ERQ'); xlabel('Synaptic threshold (V_{th}), mV')
+set(gca,'Fontsize',16,'FontName','Arial')
 
+%% interpolate all the measures so that they are within the same boundaries (-54 to -28)
 
+Vthint=cell(1,2); FRint=cell(1,2); Aint=cell(1,2);
+DCint=cell(1,2);  SpkFRint=cell(1,2); Nspksint=cell(1,2); ERQint=cell(1,2);
 
-%% interpolate all the measures so that they are in the same boundaries (-54 to -28)
-
-Vthint=[]; FRint=[]; Aint=[]; DCint=[];  SpkFRint=[]; Nspksint=[]; ERQint=[];
 for n=1:2 % neuron number
-    for i = 1:length(folder) % experiment
+    for i = 1:N % experiment
         Vthall =[-54:2:-28];
         Vthint{n}(i,:) = interp1(Vth1{i},Vth1{i},Vthall,'linear','extrap'); % threshold
         FRint{n}(i,:) = interp1(Vth1{i},FR{i}{n},Vthall); % cycle frequency
@@ -171,14 +167,13 @@ for n=1:2 % neuron number
         Nspksint{n}(i,:) = interp1(Vth1{i},Nspks{i}{n},Vthall); % # spikes/burst
         ERQint{n}(i,:) = interp1(Vth1{i},ERQ{i}{n},Vthall); % # ERQ
     end
-    FRint{n}(FRint{n}==0)=NaN; Aint{n}(Aint{n}==0)=NaN;
-    DCint{n}(DCint{n}==0)=NaN; SpkFRint{n}(SpkFRint{n}==0)=NaN;
-    Nspksint{n}(Nspksint{n}==0)=NaN;
 end
 
 %% calculate interpolated values across two neurons
-FRmeanint=[]; Ameanint=[]; SpkFRmeanint=[]; Nspksmeanint=[]; DCmeanint=[]; ERQmeanint=[];
-for j = 1:length(folder) % experiment
+
+ERQmeanint=[];
+
+for j = 1:N
         FRmeanint(j,:)=nanmean([FRint{1}(j,:);FRint{2}(j,:)]);
         Ameanint(j,:)=nanmean([Aint{1}(j,:);Aint{2}(j,:)]);
         SpkFRmeanint(j,:)=nanmean([SpkFRint{1}(j,:);SpkFRint{2}(j,:)]);
@@ -186,114 +181,46 @@ for j = 1:length(folder) % experiment
         DCmeanint(j,:)=nanmean([DCint{1}(j,:);DCint{2}(j,:)]);
         ERQmeanint(j,:)=nanmean([ERQint{1}(j,:);ERQint{2}(j,:)]);
 end
-%% if the circuit not a half-center set measures to NaN
-for j = 1:length(folder)
-Ameanint(isnan(FRmeanint) | isinf(FRmeanint))=NaN;
-Nspksmeanint(isnan(FRmeanint) | isinf(FRmeanint))=NaN;
-SpkFRmeanint(isnan(FRmeanint) | isinf(FRmeanint))=NaN;
-DCmeanint(isnan(FRmeanint) | isinf(FRmeanint))=NaN;
-ERQmeanint(isnan(FRmeanint) | isinf(FRmeanint))=NaN;
-end
 
-% if values in one of the neurons are NaN
-FRmeanint(isnan(FRint{1}) | isinf(FRint{2}))=NaN;
-Ameanint(isnan(Aint{1}) | isinf(Aint{2}))=NaN;
-Nspksmeanint(isnan(Nspksint{1}) | isinf(Nspksint{2}))=NaN;
-SpkFRmeanint(isnan(SpkFRint{1}) | isinf(SpkFRint{2}))=NaN;
-DCmeanint(isnan(DCint{1}) | isinf(DCint{2}))=NaN;
-ERQmeanint(isnan(ERQint{1}) | isinf(ERQint{2}))=NaN;
-
-
-%% correlation coefficient for the cycle frequency and the amplitude
-corrcoef(FRmeanint(~isnan(Ameanint)),Ameanint(~isnan(Ameanint)))
-clf ,scatter(FRmeanint(~isnan(Ameanint)),Ameanint(~isnan(Ameanint)),'filled')
-
-%% stats (one way repeated measures ANOVA) for DC and spike frequency
-[p,tbl,stats]=anova1(DCmeanint,[])
-%[p,tbl,stats]=anova1(SpkFRmeanint,[],'off')
-
-%comp=multcompare(stats,'display','off');
-%group=(comp(:,1:2));
-%hcomp=comp(:,6)<0.05;
-%pvalsig=comp(hcomp,6);
-%sigpoints=([group(hcomp==1,1), group(hcomp==1,2)])
-%[~,idx] = unique(sort(sigpoints,2),'rows','stable');
-%pvalsig_dc=pvalsig(idx);
-%sigpoints1_dc = sigpoints(idx,:)
-%groups_dc=(num2cell(sigpoints1_dc,2));
-
-%% repeated measures ANOVA spike frequency
-t=table([1:14]',DCmeanint(1,:)',DCmeanint(2,:)',DCmeanint(3,:)',DCmeanint(4,:)',...
-    DCmeanint(5,:)',DCmeanint(6,:)',DCmeanint(7,:)',DCmeanint(8,:)',DCmeanint(9,:)',...
-    DCmeanint(10,:)',DCmeanint(11,:)',DCmeanint(12,:)',DCmeanint(13,:)',DCmeanint(14,:)',...
-    'VariableNames',{'dc','Vth1','Vth2','Vth3','Vth4',...
-    'Vth5','Vth6','Vth7','Vth8','Vth9','Vth10','Vth11','Vth12','Vth13','Vth14'});
-Meas = table([1 2 3 4 5 6 7 8 9 10 11 12 13 14]','VariableNames',{'Measurements'});
-rm=fitrm(t,'Vth1-Vth14~dc','WithinDesign',Meas);
-ranovatbl = ranova(rm)
-%%
-t=table([1:50]',DCint1(1,:)',DCint1(2,:)',DCint1(3,:)',DCint1(4,:)',...
-    DCint1(5,:)',DCint1(6,:)',DCint1(7,:)',DCint1(8,:)',DCint1(9,:)',...
-    DCint1(10,:)',DCint1(11,:)',DCint1(12,:)',DCint1(13,:)',DCint1(14,:)',...
-    'VariableNames',{'dc','Vth1','Vth2','Vth3','Vth4',...
-    'Vth5','Vth6','Vth7','Vth8','Vth9','Vth10','Vth11','Vth12','Vth13','Vth14'});
-Meas = table([1 2 3 4 5 6 7 8 9 10 11 12 13 14]','VariableNames',{'Measurements'});
-rm=fitrm(t,'Vth1-Vth14~1','WithinDesign',Meas);
-ranovatbl = ranova(rm)
-%% repeated measures ANOVA spike frequency
-t=table([1:14]',SpkFRmeanint(1,:)',SpkFRmeanint(2,:)',SpkFRmeanint(3,:)',SpkFRmeanint(4,:)',...
-    SpkFRmeanint(5,:)',SpkFRmeanint(6,:)',SpkFRmeanint(7,:)',SpkFRmeanint(8,:)',SpkFRmeanint(9,:)',...
-    SpkFRmeanint(10,:)',SpkFRmeanint(11,:)',SpkFRmeanint(12,:)',SpkFRmeanint(13,:)',SpkFRmeanint(14,:)',...
-    'VariableNames',{'SpkFR','Vth1','Vth2','Vth3','Vth4',...
-    'Vth5','Vth6','Vth7','Vth8','Vth9','Vth10','Vth11','Vth12','Vth13','Vth14'});
-Meas = table([1 2 3 4 5 6 7 8 9 10 11 12 13 14]','VariableNames',{'Measurements'});
-rm=fitrm(t,'Vth1-Vth14~1','WithinDesign',Meas);
-ranovatbl = ranova(rm)
-%%
-t=table([1:50]',SpkFRint1(1,:)',SpkFRint1(2,:)',SpkFRint1(3,:)',SpkFRint1(4,:)',...
-    SpkFRint1(5,:)',SpkFRint1(6,:)',SpkFRint1(7,:)',SpkFRint1(8,:)',SpkFRint1(9,:)',...
-    SpkFRint1(10,:)',SpkFRint1(11,:)',SpkFRint1(12,:)',SpkFRint1(13,:)',SpkFRint1(14,:)',...
-    'VariableNames',{'SpkFR','Vth1','Vth2','Vth3','Vth4',...
-    'Vth5','Vth6','Vth7','Vth8','Vth9','Vth10','Vth11','Vth12','Vth13','Vth14'});
-Meas = table([1 2 3 4 5 6 7 8 9 10 11 12 13 14]','VariableNames',{'Measurements'});
-rm=fitrm(t,'Vth1-Vth14~1','WithinDesign',Meas);
-ranovatbl = ranova(rm)
+% if the circuit not a half-center set measures to NaN
+Ameanint(isnan(FRmeanint)) = NaN;
+Nspksmeanint(isnan(FRmeanint)) = NaN;
+SpkFRmeanint(isnan(FRmeanint)) = NaN;
+DCmeanint(isnan(FRmeanint)) = NaN;
+ERQmeanint(isnan(FRmeanint)) = NaN;
+    
+% if values for one of the neurons are NaN
+FRmeanint(isnan(FRint{1}) | isnan(FRint{2}))=NaN;
+Ameanint(isnan(Aint{1}) | isnan(Aint{2}))=NaN;
+Nspksmeanint(isnan(Nspksint{1}) | isnan(Nspksint{2}))=NaN;
+SpkFRmeanint(isnan(SpkFRint{1}) | isnan(SpkFRint{2}))=NaN;
+DCmeanint(isnan(DCint{1}) | isnan(DCint{2}))=NaN;
+ERQmeanint(isnan(ERQint{1}) | isnan(ERQint{2}))=NaN;
 
 %% interpolate characteristics for ERQ values
-FRint1=[]; ERQint1=[]; Aint1=[]; DCint1=[]; SpkFRint1=[]; Nspksint1=[]; Vthint1=[];
+
+%FRint1=[]; ERQint1=[]; Aint1=[]; DCint1=[]; SpkFRint1=[]; Nspksint1=[]; Vthint1=[];
+
 ERQint1 = linspace(min(ERQmeanint(:)),max(ERQmeanint(:)),50);
-for i = 1:length(folder) 
-    x=ERQmeanint(i,find(~isnan(ERQmeanint(i,:))));
-   % Vthint1(i,:) = interp1(x,Vth1{i}(i,find(~isnan(ERQmeanint(i,:)))),ERQint1,'linear');    
+
+for i = 1:N 
+    x=ERQmeanint(i,find(~isnan(ERQmeanint(i,:))));    
     FRint1(i,:) = interp1(x,FRmeanint(i,find(~isnan(ERQmeanint(i,:)))),ERQint1,'linear');
-    %FRint1(i,:) = interp1(modeint{n}(i,:),FRint{n}(i,:),modeint1);
     Aint1(i,:) = interp1(x,Ameanint(i,find(~isnan(ERQmeanint(i,:)))),ERQint1);
     DCint1(i,:) = interp1(x,DCmeanint(i,find(~isnan(ERQmeanint(i,:)))),ERQint1);
     SpkFRint1(i,:) = interp1(x,SpkFRmeanint(i,find(~isnan(ERQmeanint(i,:)))),ERQint1);
     Nspksint1(i,:) = interp1(x,Nspksmeanint(i,find(~isnan(ERQmeanint(i,:)))),ERQint1);
 end
 
-FRint1(FRint1==0)=NaN; Aint1(Aint1==0)=NaN; dcint1(dcint1==0)=NaN; 
-Spkfrint1(Spkfrint1==0)=NaN; nspksint1(nspksint1==0)=NaN;
-
-% % if sample size is to small for averaging
-% for i=1:100
-% if length(FRint(~isnan(FRint(:,i)),i))<5
-%     FRint(:,i)=NaN; Aint(:,i)=NaN; dcint(:,i)=NaN; Spkfrint(:,i)=NaN; nspksint(:,i)=NaN;
-% end
-% end
-%%
-%[rho,pval]=corr(nanmean(SpkFRint1)',ERQint1','Type','Spearman') 
-[rho,pval]=corr(nanmean(DCint1)',ERQint1','Type','Spearman') 
 %% plot all the characteristics of half-center for all the experiments
-%col = cbrewer('qual','Set1',length(Vth1)); 
+ 
 clf,
 subplot(1,5,1) % cycle frequency
 plot(ERQmeanint',FRmeanint','linewidth',1,'color','k'), hold on
 plot(ERQint1,nanmean(FRint1),'r','linewidth',2)
 ylim([0.05 0.65]); xlim([-0.1 0.2])
 xticks([-0.1:0.05:0.2]); yticks([0:0.1:0.7])
-text(-0.08,0.6,['N=',num2str(length(folder))],'Fontsize',16,'FontName','Arial')
+text(-0.08,0.6,['N=',num2str(N)],'Fontsize',16,'FontName','Arial')
 xlabel('ERQ'); ylabel('Cycle freq, Hz')
 set(gca,'Fontsize',16,'FontName','Arial')
 axis square
@@ -333,11 +260,13 @@ xticks([-0.1:0.05:0.2]); yticks([0:1:10])
 xlabel('ERQ'); ylabel('Spike freq, Hz')
 set(gca,'Fontsize',16,'FontName','Arial')
 axis square
-%%
-fig1=figure(1);
-fig1.Renderer='Painters';
-saveas(gcf,'fig2_characteristics.pdf')
-set(gcf,'Units','Inches');
-pos = get(gcf,'Position');
-set(gcf,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
-print(gcf,'map_transition','-dpdf','-r0')
+
+%% Pearson correlation coefficient between the cycle frequency and the amplitude
+
+r = corrcoef(FRmeanint(~isnan(Ameanint)),Ameanint(~isnan(Ameanint)))
+%clf ,scatter(FRmeanint(~isnan(Ameanint)),Ameanint(~isnan(Ameanint)),'filled')
+
+%% Spearman rank correlation test (duty cycle vs ERQ and spike frequency vs ERQ)
+
+[rhoDC,pval]=corr(nanmean(DCint1)',ERQint1','Type','Spearman') 
+[rhoSpkFR,pval]=corr(nanmean(SpkFRint1)',ERQint1','Type','Spearman') 
