@@ -1,101 +1,14 @@
-%% all the map data
-addpath('C:\Users\moroz\Desktop\HCO_git')
-addpath('C:\Users\moroz\Documents\Katya_DynamicClamp\matlab-tools-master')
-addpath(genpath('C:\Users\moroz\Documents\Katya_DynamicClamp\hco_related_codes'))
 
-folder=[]; ifiles=[];
-for i=1:7
-    switch i
-        case 1
-            folder{i}= 'D:\Katya_DynamicClamp\HCO_data\951_060\';
-            ifiles{i}=[14:18] % [-30, -35, -40, -45, -50]
-        case 2
-            folder{i}= 'D:\Katya_DynamicClamp\HCO_data\951_036\';
-            ifiles{i}=[8:13] %  [-35, -40,-45,-50]
-    end
-end
+%% load all the data with the mixed maps
 
-%% load data (h5)
-%data=[]; param=[]; key=[]; datalength=[];
-for j=1:2
-    for i = ifiles{j}
-        file_search = strcat(folder{j}, '\', '*.h5');  files=dir(file_search);
-        [param{j}{i},data{j}{i},key{j}{i}] = rtxih5load([folder{j},files(i).name]);
-    end
-    datalength{j}(i)=length(data{j}{i});
-    Fs(j)=1./param{j}{ifiles{j}(1)}.dt;
-end
-
-%% plot the data
-j=1; i=ifiles{j}(1); clf;
-x=1/Fs(j)/60:1/Fs(j)/60:length(data{j}{i}(1,:))/Fs(j)/60;
-for ii=1:size(data{j}{i},1)
-subplot(size(data{j}{i},1),1,ii)
-plot(x,data{j}{i}(ii,:),'k','linewidth',1)
-end
-%% assign variables
-%V1=[]; V2=[]; I1=[]; I2=[]; gh=[]; gsyn=[]; time=[]; gmi=[];
-for j= 1% experiment
-    k=1;
-    for l=ifiles{j}
-        V1{j}{k}=data{j}{l}(3,1:end); V2{j}{k}=data{j}{l}(4,1:end);
-        I1{j}{k}=data{j}{l}(1,1:end); I2{j}{k}=data{j}{l}(2,1:end);
-
-        try; Vth{j}(k)=param{j}{l}.V_half_12_HCO_parameter_loop; end
-        try; Vth{j}(k)=param{j}{l}.V_half_11_HCO_parameter_loop; end
-        
-        gh{j}{k}=data{j}{l}(6,1:end); gsyn{j}{k}=data{j}{l}(7,1:end);    
-        time{j}{k}=data{j}{l}(9,1:end);
-        k=k+1;
-    end
-end
-
-%% find gH, gSyn values and break into segments
-%gH=[]; gSyn=[]; gMI=[]; time_start=[]; Vhco=[]; Ihco=[];
-for j=1
-    for k=1:length(ifiles{j})
-        [time1, time_start{j}{k}]=find(time{j}{k}==0.001);
-        time_start{j}{k}=time_start{j}{k}(1:1:end);
-        
-        for ii=1:length(time_start{j}{k})    
-            gH{j}{k}(ii)=mean(gh{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j))); gH{j}{k}(ii)=round(gH{j}{k}(ii)*10^4);
-            gSyn{j}{k}(ii)=mean(gsyn{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j))); gSyn{j}{k}(ii)=round(gSyn{j}{k}(ii)*10^4);
-            
-            Vhco1{j}{k}{ii}=V1{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j))*10^2; % mV
-            Vhco2{j}{k}{ii}=V2{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j))*10^2; % mV
-            
-            Ihco1{j}{k}{ii}=I1{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j));
-            Ihco2{j}{k}{ii}=I2{j}{k}(time_start{j}{k}(ii):time_start{j}{k}(ii)+40*Fs(j));
-            
-            Vhco{j}{k}{ii}=[Vhco1{j}{k}{ii}; Vhco2{j}{k}{ii}];
-            Ihco{j}{k}{ii}=[Ihco1{j}{k}{ii}; Ihco2{j}{k}{ii}];
-        end
-    end
-end
-
-%% here save data to structure
-
-data=[];
-
-j=1;
-
-data{j}.file = '951_060';
-data{j}.Vth = [-30, -35, -40, -45, -50];
-data{j}.V = Vhco{j};
-data{j}.I = Ihco{j};
-data{j}.gH = gH{j};
-data{j}.gSyn = gSyn{j};
-data{j}.Fs = Fs(j);
-
-%% save structure
-
-save('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig4.mat','data','-v7.3')
+load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig4.mat')
 
 %% calculate half-center output characteristcs as a function of gH and gSyn
 
 hcostat=[]; ERQ=[];
 
-for jj = 1:numel(data) % experiment
+for jj = 1 %:numel(data) % experiment
+    jj
     for j = 1:numel(data{jj}.V) % map number
         for i = 1:length(data{jj}.V{j}) % (gh,gsyn) combination
             for ii = 1:2 % neuron number
@@ -120,7 +33,9 @@ end
 
 FR =[]; A=[]; SpkFR=[]; Nspk=[]; DC=[]; dc=[];
 
-for jj = 1:numel(data) % experiment
+meanFR=[]; stfFR=[]; CVFR=[];
+
+for jj = 1 %1:numel(data) % experiment
     for j = 1:numel(data{jj}.V) % map number
         for i = 1:length(data{jj}.V{j}) % (gh,gsyn) combination
             for ii = 1:2 % neuron number
@@ -131,21 +46,63 @@ for jj = 1:numel(data) % experiment
                     Nspk{jj}{j}(ii,i) = hcostat{jj}{j}{i}{ii}.nSpks_mean; % # spikes/burst
                     DC{jj}{j}(ii,i) = hcostat{jj}{j}{i}{ii}.dc_mean; % #duty cycle (based on spikes)
                     dc{jj}{j}(ii,i) = hcostat{jj}{j}{i}{ii}.DC_mean; % #duty cycle (based on slow-wave)
+
+                    % evaluate asymmetry
+                    BurDur{jj}{j}{ii,i} = hcostat{jj}{j}{i}{ii}.BurDur; % based on slow-wave
+                    active{jj}{j}(ii,i) = sum(hcostat{jj}{j}{i}{ii}.BurDur(2:end-1));
+                    
+                    BrstDur{jj}{j}{ii,i} =  hcostat{jj}{j}{i}{ii}.burststat.BuDur;
+                    meanBrstDur{jj}{j}(ii,i) =  mean(BrstDur{jj}{j}{ii,i});
+                    
+                    % coefficient of variation of burst characteristics
+                    meanFR{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
+                    stdFR{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
+                    CVFR{jj}{j}(ii,i) = stdFR{jj}{j}(ii,i)/meanFR{jj}{j}(ii,i);
+                    
+                    meanNspk{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.nSp(2:end-2));
+                    stdNspk{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.nSp(2:end-2));
+                    CVNspk{jj}{j}(ii,i) = stdNspk{jj}{j}(ii,i)/meanNspk{jj}{j}(ii,i);
+                    
+                    meanSpkFR{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.SpFreq(2:end-2));
+                    stdSpkFR{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.SpFreq(2:end-2));
+                    CVSpkFR{jj}{j}(ii,i) = stdSpkFR{jj}{j}(ii,i)/meanSpkFR{jj}{j}(ii,i);
+                    
                 else
                     FR{jj}{j}(ii,i)=NaN; A{jj}{j}(ii,i)=NaN;
                     SpkFR{jj}{j}(ii,i)=NaN; Nspk{jj}{j}(ii,i)=NaN;
                     DC{jj}{j}(ii,i)=NaN; dc{jj}{j}(ii,i)=NaN;
+                                      
                 end
             end
         end
     end
 end
 
+%% quantify irregularity in bursting
+hcostat=[]; 
+meanNspk=[];  stdNspk=[]; CVNspk=[];
+meanFR=[];  stdFR=[]; CVFR=[];
+
+i=1;
+
+for j=1:2
+    
+    meanNspk(i,j) = mean(hcostat{j}.burststat.nSp(2:end-2));
+    stdNspk(i,j) = std(hcostat{j}.burststat.nSp(2:end-2));
+    CVNspk(i,j) = stdNspk(j)/meanNspk(j);
+
+    meanFR(i,j) = mean(hcostat{j}.burststat.BuFreq(2:end-2));
+    stdFR(i,j) = std(hcostat{j}.burststat.BuFreq(2:end-2));
+    CVFR(i,j) = stdFR(j)/meanFR(j);
+
+
+end
+
 %% classify the network state (silent, spiking, half-center,..)
 
 networkstate=[]; state=[]; percentSingleSpikeBursts=[];
 
-for jj=1:numel(data) % experiment
+for jj = 1 %1:numel(data) % experiment
     
     for j = 1:numel(data{jj}.V) % map
         
@@ -206,38 +163,53 @@ for jj=1:numel(data) % experiment
     end
 end
 
-%% if state is not HCO,  set all the measures to 0)
+ %% if identified state is not a half-center, make sure all the half-center characteristics are NaN
 
-for jj=1 % experiment
-    for j=1:numel(state{jj}) % map number
-        for ii=1:2 % neurons number
-            for i=1:length(networkstate{jj}{j})
-                
-                if networkstate{jj}{j}(i)~=5 % if not a half-center
-                    ERQ{jj}{j}(ii,i)=NaN;
-                    FR{jj}{j}(ii,i)=NaN;
-                    A{jj}{j}(ii,i)=NaN;
-                    SpkFR{jj}{j}(ii,i)=NaN;
-                    Nspk{jj}{j}(ii,i)=NaN;
-                    DC{jj}{j}(ii,i)=NaN;
-                    dc{jj}{j}(ii,i)=NaN;
-                end
-            end
-        end
-    end
-end
+ for jj=1 % experiment
+     for j=1:numel(state{jj}) % map number
+         for i=1:length(networkstate{jj}{j}) % (gh,gsyn) combination
+             if state{jj}{j}(i)~=5 % if not a half-center
+                 ERQ{jj}{j}(:,i)=NaN;
+                 FR{jj}{j}(:,i)=NaN;
+                 A{jj}{j}(:,i)=NaN;
+                 SpkFR{jj}{j}(:,i)=NaN;
+                 Nspk{jj}{j}(:,i)=NaN;
+                 DC{jj}{j}(:,i)=NaN;
+                 dc{jj}{j}(:,i)=NaN;
+                 
+                 CVFR{jj}{j}(:,i)=NaN;
+             end
+         end
+     end
+ end
 
 %% calculate mean characteristics across two neurons in a circuit
 
-for jj = 1:numel(data)
+for jj = 1 %:numel(data)
     for j = 1:numel(data{jj}.V)
         ERQall{jj}(j,:) = mean(ERQ{jj}{j});
-        FRall{jj}(j,:) = mean(FR{jj}{j}); 
-        Aall{jj}(j,:) = mean(A{jj}{j}); 
-        SpkFRall{jj}(j,:) = mean(SpkFR{jj}{j}); 
-        Nspkall{jj}(j,:) = mean(Nspk{jj}{j}); 
-        DCall{jj}(j,:) = mean(DC{jj}{j}); 
-        dcall{jj}(j,:) = mean(dc{jj}{j});         
+        FRall{jj}(j,:) = mean(FR{jj}{j});
+        Aall{jj}(j,:) = mean(A{jj}{j});
+        SpkFRall{jj}(j,:) = mean(SpkFR{jj}{j});
+        Nspkall{jj}(j,:) = mean(Nspk{jj}{j});
+        DCall{jj}(j,:) = mean(DC{jj}{j});
+        dcall{jj}(j,:) = mean(dc{jj}{j});
+        
+        CVFRall{jj}(j,:) = mean(CVFR{jj}{j});
+        
+        %reshape
+        ERQmean{jj}{j} = reshape(ERQall{jj}(j,:),[7,7])';
+        for i=1:2
+            ERQ1{jj}{j} = reshape(ERQ{jj}{j}(i,:),[7,7]);
+        end
+        FRmean{jj}{j} = reshape(FRall{jj}(j,:),[7,7])';
+        Amean{jj}{j} = reshape(Aall{jj}(j,:),[7,7])';
+        SpkFRmean{jj}{j} = reshape(SpkFRall{jj}(j,:),[7,7])';
+        Nspkmean{jj}{j} = reshape(Nspkall{jj}(j,:),[7,7])';
+        DCmean{jj}{j} = reshape(DCall{jj}(j,:),[7,7])';
+        dcmean{jj}{j} = reshape(dcall{jj}(j,:),[7,7])';
+        
+        CVFRmean{jj}{j} = reshape(CVFRall{jj}(j,:),[7,7])';
     end
 end
 
@@ -251,27 +223,9 @@ minSpkFR = min(SpkFRall{jj}(:)); maxSpkFR = max(SpkFRall{jj}(:));
 minDC = min(DCall{jj}(:)); maxDC = max(DCall{jj}(:)); 
 mindc = min(dcall{jj}(:)); maxdc = max(dcall{jj}(:)); 
 
-%% reshpe
+minCVFR = min(CVFRall{jj}(:)); maxCVFR = max(CVFRall{jj}(:)); 
 
-FRmean=[]; Amean=[]; SpkFRmean=[]; Nspkmean=[]; DCmean=[]; dcmean=[]; ERQ1=[];
-
-for jj = 1:numel(data)
-    for j=1:numel(data{jj}.V)
-        
-        ERQmean{jj}{j} = reshape(ERQall{jj}(j,:),[7,7])';
-        for i=1:2
-            ERQ1{jj}{j} = reshape(ERQ{jj}{j}(i,:),[7,7]);
-        end
-        FRmean{jj}{j} = reshape(FRall{jj}(j,:),[7,7])';
-        Amean{jj}{j} = reshape(Aall{jj}(j,:),[7,7])';
-        SpkFRmean{jj}{j} = reshape(SpkFRall{jj}(j,:),[7,7])';
-        Nspkmean{jj}{j} = reshape(Nspkall{jj}(j,:),[7,7])';
-        DCmean{jj}{j} = reshape(DCall{jj}(j,:),[7,7])';
-        dcmean{jj}{j} = reshape(dcall{jj}(j,:),[7,7])';
-    end
-end
-
-%% Figure 3 C-E
+%% reproduce Figure 4 C-E
 
 jj=1;
 gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
@@ -310,7 +264,7 @@ for j=1:5 % map
         end
         
         xticks([150,300,450,600,750,900,1050]); yticks([150,300,450,600,750,900,1050]);
-        xlabel('gSyn'); axis square
+        xlabel('gSyn, nS'); ylabel('gH, nS'); axis square
         set(gca,'Fontsize',14,'FontName','Arial');
         
         for i=1:10 % create grid
@@ -320,9 +274,7 @@ for j=1:5 % map
     end
 end
 
-
-
-%% plot all the maps
+%% reproduce supplementaty figure for figure 4
 
 jj=1;
 gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
@@ -331,38 +283,29 @@ g=0.04; l=0.07;
 clf,
 
 for j=1:5 % map 
-    for i=1:6 % number of features to display
+    for i=1:4 % number of features to display
         
-        h1=display.bigsubplot(6,5,i,j,g,l);
+        h1=display.bigsubplot(4,5,i,j,g,l);
         
         switch i
             case 1
-                display.genimagesc(state{jj}{j},gH,gSyn);
+                display.genimagesc(state{jj}{j}',gH,gSyn);
                 myColorMap = [0.3,0.33,0.35; 0.25,0.4,0.3; 0,0.4,0.5; 0.8,0.5,0.3; 0.6,0.2,0;];
                 colormap(h1,myColorMap);
                 h=colorbar;
                 h.Ticks=[1:5]; h.TickLabels={'silent','asymmetric','irregular\newlinespiking','antiphase\newlinespiking','HCO'}; caxis([1 5]);
-                title('State');  ylabel('gH');
-                axis square
-                
-                %title(['Vth=', num2str(Vth{j}(k)),'mV'])
-                
+                ylabel('gH');
+                axis square              
+                title(['Vth=', num2str(data{jj}.Vth(j)),'mV'])
+                              
             case 2
-                display.genimagesc(FRmean{jj}{j},gH,gSyn);
-                myColorMap = colormaps.viridis; myColorMap(1,:) = 1; colormap(h1,myColorMap);
-                h=colorbar; ylabel(h,'Cycle frequency, Hz'),
-                title('Cycle frequency');
-                %caxis([min(FRescmean(:))-0.02 max(FRescmean(:))+0.02])
-                caxis([minFR-0.02 maxFR+0.02])
-                
-            case 3
                 display.genimagesc(Amean{jj}{j},gH, gSyn);
                 myColorMap = colormaps.magma; myColorMap(1,:) = 1; colormap(h1,myColorMap);
                 h=colorbar; ylabel(h,'Amplitude, mV'),
                 title('Slow-wave amplitude');
                 caxis([minA-0.2 maxA+0.2])
                 
-            case 4
+            case 3
                 display.genimagesc(Nspkmean{jj}{j},gH,gSyn);
                 myColorMap = summer(256); myColorMap(1,:) = 1; colormap(h1,myColorMap);
                 h=colorbar; ylabel(h,'# spikes/burst'),
@@ -370,15 +313,7 @@ for j=1:5 % map
                 %caxis([min(Nspksmean(:))-0.2 max(Nspksescmean(:))+0.2])
                 caxis([minNspk-0.3 maxNspk+0.3])
                 
-            case 5
-                display.genimagesc(SpkFRmean{jj}{j},gH,gSyn);
-                myColorMap = spring(256); myColorMap(1,:) = 1; colormap(h1,myColorMap);
-                h=colorbar; ylabel(h,'Spike Frequency, Hz'),
-                title('Spike Frequency');
-                %caxis([minSpkFR-0.2 maxSpkFR+0.2])
-                caxis([minSpkFR-0.2 25])
-                
-            case 6
+            case 4
                 %display.genimagesc(DCmean{jj},gH,gSyn);
                 display.genimagesc(DCmean{jj}{j},gH,gSyn);
                 myColorMap = copper(256); myColorMap(1,:) = 1; colormap(h1,myColorMap);
@@ -400,4 +335,79 @@ for j=1:5 % map
     end
 end
 
+%% plot CV of the characteristics of the circuit output
 
+jj=1;
+gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
+
+g=0.04; l=0.07;
+clf,
+
+for j=1:5 % map
+    for i=1%:3 % number of features to display
+        
+        h1=display.bigsubplot(3,5,i,j,g,l);
+        
+        switch i
+            
+            case 1
+                display.genimagesc(CVFRmean{jj}{j},gH,gSyn);
+                myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(h1,myColorMap);
+                if j ==5; h=colorbar; ylabel(h,'CV of cycle frequency'); end
+                %caxis([minCVFR-0.01 maxCVFR+0.01])
+                caxis([minCVFR-0.01 0.15])
+                title(['Vth=',num2str(data{jj}.Vth(j))])
+        end
+    end
+end
+
+%% asymmerty
+
+jj=1;
+gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
+
+g=0.04; l=0.07;
+clf,
+
+for j=1:5 % map
+    for i=1%:3 % number of features to display
+        
+        active1 = reshape(active{jj}{j}(1,:),[7,7]);
+        active2 = reshape(active{jj}{j}(2,:),[7,7])
+        h1=display.bigsubplot(3,5,i,j,g,l);
+        
+        switch i
+            
+            case 1
+                display.genimagesc(abs(active1-active2)',gH,gSyn);
+                myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(h1,myColorMap);
+                if j ==5; h=colorbar; ylabel(h,'CV of cycle frequency'); end
+                %caxis([minCVFR-0.01 maxCVFR+0.01])
+                %caxis([minCVFR-0.01 0.15])
+                title(['Vth=',num2str(data{jj}.Vth(j))])
+        end
+    end
+end
+
+%%
+i=8; %experiment
+
+clf
+
+for i=1:8
+    subtightplot(2,4,i,g,l,l)
+    
+    j=1; %gmi
+    active{i,j}(active{i,j}==0)=NaN;
+    %plot(data.Vth{i}{j}, abs(active{i,j}(:,2) - active{i,j}(:,1)),'.-','linewidth',1)
+    plot(data.Vth{i}{j}, abs(meanBrstDur{i,j}(:,2) - meanBrstDur{i,j}(:,1)),'.-','linewidth',1)
+    
+    j=2;
+    active{i,j}(active{i,j}==0)=NaN;
+    %hold on, plot(data.Vth{i}{j}, abs(active{i,j}(:,2) - active{i,j}(:,1)),'.-','linewidth',1)
+    hold on, plot(data.Vth{i}{j}, abs(meanBrstDur{i,j}(:,2) - meanBrstDur{i,j}(:,1)),'.-','linewidth',1)
+    %hold on, plot(data.Vth{i}{j},active{i,j}(:,2),'.-','linewidth',1)
+   % ylim([0 35])
+    xlim([-53 -33]); xticks([-54:2:-34])
+    legend('ctrl','gmi=150nS')
+end
