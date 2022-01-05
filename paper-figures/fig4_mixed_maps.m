@@ -5,9 +5,9 @@ load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig4.mat')
 
 %% calculate half-center output characteristcs as a function of gH and gSyn
 
-hcostat=[]; ERQ=[];
+%hcostat=[]; ERQ=[];
 
-for jj = 1 %:numel(data) % experiment
+for jj = 3:5 %:numel(data) % experiment
     jj
     for j = 1:numel(data{jj}.V) % map number
         for i = 1:length(data{jj}.V{j}) % (gh,gsyn) combination
@@ -35,7 +35,7 @@ FR =[]; A=[]; SpkFR=[]; Nspk=[]; DC=[]; dc=[];
 
 meanFR=[]; stfFR=[]; CVFR=[];
 
-for jj = 1 %1:numel(data) % experiment
+for jj = 1:2 %1:numel(data) % experiment
     for j = 1:numel(data{jj}.V) % map number
         for i = 1:length(data{jj}.V{j}) % (gh,gsyn) combination
             for ii = 1:2 % neuron number
@@ -47,23 +47,26 @@ for jj = 1 %1:numel(data) % experiment
                     DC{jj}{j}(ii,i) = hcostat{jj}{j}{i}{ii}.dc_mean; % #duty cycle (based on spikes)
                     dc{jj}{j}(ii,i) = hcostat{jj}{j}{i}{ii}.DC_mean; % #duty cycle (based on slow-wave)
 
-                    % evaluate asymmetry
+                    % evaluate asymmetry between neurons
                     BurDur{jj}{j}{ii,i} = hcostat{jj}{j}{i}{ii}.BurDur; % based on slow-wave
-                    active{jj}{j}(ii,i) = sum(hcostat{jj}{j}{i}{ii}.BurDur(2:end-1));
+                    meanBurDur{jj}{j}(ii,i) =  mean(BurDur{jj}{j}{ii,i});
                     
-                    BrstDur{jj}{j}{ii,i} =  hcostat{jj}{j}{i}{ii}.burststat.BuDur;
+                    BrstDur{jj}{j}{ii,i} =  hcostat{jj}{j}{i}{ii}.burststat.BuDur; % based on spikes
                     meanBrstDur{jj}{j}(ii,i) =  mean(BrstDur{jj}{j}{ii,i});
                     
-                    % coefficient of variation of burst characteristics
-                    meanFR{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
-                    stdFR{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
+                    % coefficient of variation of burst characteristics (based on spikes)
+                    %meanFR{jj}{j}(ii,i) = nanmean(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
+                    %stdFR{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.BuFreq(2:end-2));
+                    
+                    meanFR{jj}{j}(ii,i) = nanmean(1./hcostat{jj}{j}{i}{ii}.T1);
+                    stdFR{jj}{j}(ii,i) = std(1./hcostat{jj}{j}{i}{ii}.T1);
                     CVFR{jj}{j}(ii,i) = stdFR{jj}{j}(ii,i)/meanFR{jj}{j}(ii,i);
                     
-                    meanNspk{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.nSp(2:end-2));
+                    meanNspk{jj}{j}(ii,i) = nanmean(hcostat{jj}{j}{i}{ii}.burststat.nSp(2:end-2));
                     stdNspk{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.nSp(2:end-2));
                     CVNspk{jj}{j}(ii,i) = stdNspk{jj}{j}(ii,i)/meanNspk{jj}{j}(ii,i);
                     
-                    meanSpkFR{jj}{j}(ii,i) = mean(hcostat{jj}{j}{i}{ii}.burststat.SpFreq(2:end-2));
+                    meanSpkFR{jj}{j}(ii,i) = nanmean(hcostat{jj}{j}{i}{ii}.burststat.SpFreq(2:end-2));
                     stdSpkFR{jj}{j}(ii,i) = std(hcostat{jj}{j}{i}{ii}.burststat.SpFreq(2:end-2));
                     CVSpkFR{jj}{j}(ii,i) = stdSpkFR{jj}{j}(ii,i)/meanSpkFR{jj}{j}(ii,i);
                     
@@ -78,31 +81,11 @@ for jj = 1 %1:numel(data) % experiment
     end
 end
 
-%% quantify irregularity in bursting
-hcostat=[]; 
-meanNspk=[];  stdNspk=[]; CVNspk=[];
-meanFR=[];  stdFR=[]; CVFR=[];
-
-i=1;
-
-for j=1:2
-    
-    meanNspk(i,j) = mean(hcostat{j}.burststat.nSp(2:end-2));
-    stdNspk(i,j) = std(hcostat{j}.burststat.nSp(2:end-2));
-    CVNspk(i,j) = stdNspk(j)/meanNspk(j);
-
-    meanFR(i,j) = mean(hcostat{j}.burststat.BuFreq(2:end-2));
-    stdFR(i,j) = std(hcostat{j}.burststat.BuFreq(2:end-2));
-    CVFR(i,j) = stdFR(j)/meanFR(j);
-
-
-end
-
 %% classify the network state (silent, spiking, half-center,..)
 
 networkstate=[]; state=[]; percentSingleSpikeBursts=[];
 
-for jj = 1 %1:numel(data) % experiment
+for jj = 1:2 %numel(data) % experiment
     
     for j = 1:numel(data{jj}.V) % map
         
@@ -114,18 +97,18 @@ for jj = 1 %1:numel(data) % experiment
                 percentSingleSpikeBursts{jj}{j}(i) = calcPercentSingleSpikeBursts(st1,st2);
                 
                 % both neurons spike less than 5 times in a minute
-                if length(st1(st1<60))<=5  && length(st2(st2<60))<=5
+                if length(st1)<=5  && length(st2)<=5
                     
                     networkstate{jj}{j}(i) = 1; % silent
                     
                     % one neuron spikes, the other one is silent (<5 spikes/minute)
-                elseif (length(st1(st1<60))<5  && length(st2(st2<60))>5 || length(st1(st1<60))>5  && length(st2(st2<60))<5)
+                elseif (length(st1)<5  && length(st2)>5 || length(st1)>5  && length(st2)<5)
                     
                     networkstate{jj}{j}(i) = 2; % asymmetric
                     
                     % both neurons spike more than 5 spikes per minute
-                elseif (length(st1(st1<60))>5  && length(st2(st2<60))>5 ...
-                        && hcostat{jj}{j}{i}{1}.T1_mean==0 && hcostat{jj}{j}{i}{2}.T1_mean==0)
+                elseif (length(st1)>5  && length(st2)>5 ...
+                        && isnan(hcostat{jj}{j}{i}{1}.T1_mean) && isnan(hcostat{jj}{j}{i}{2}.T1_mean))
                     
                     % if more than 80% spikes are alternating
                     if percentSingleSpikeBursts{jj}{j}(i)>0.8
@@ -139,15 +122,15 @@ for jj = 1 %1:numel(data) % experiment
                     end
                     
                     % alternating bursting pattern of activity
-                elseif (length(st1(st1<60))>5  && length(st2(st2<60))>5 && ...
-                        hcostat{jj}{j}{i}{1}.T1_mean>0 && hcostat{jj}{j}{i}{2}.T1_mean>0)
+                elseif (length(st1)>5  && length(st2)>5 && ...
+                        ~isnan(hcostat{jj}{j}{i}{1}.T1_mean) && ~isnan(hcostat{jj}{j}{i}{2}.T1_mean))
                     
                     networkstate{jj}{j}(i) = 5; % half-center oscillator
                     
                     % single spike half-center oscillator
-                elseif (length(st1(st1<60))>5  && length(st2(st2<60))>5 && ...
-                        hcostat{jj}{j}{i}{1}.T1_mean>0 && hcostat{jj}{j}{i}{2}.T1_mean>0 && ...
-                        hcostatr{jj}{j}{i}{1}.nSpks_mean==0 && hcostat{jj}{j}{i}{2}.nSpks_mean==0)
+                elseif (length(st1)>5  && length(st2)>5 && ...
+                        ~isnan(hcostat{jj}{j}{i}{1}.T1_mean) && ~isnan(hcostat{jj}{j}{i}{2}.T1_mean) && ...
+                        hcostat{jj}{j}{i}{1}.nSpks_mean==NaN && hcostat{jj}{j}{i}{2}.nSpks_mean==NaN)
                     
                     networkstate{jj}{j}(i) = 4; % antiphase spiking
                     
@@ -165,7 +148,7 @@ end
 
  %% if identified state is not a half-center, make sure all the half-center characteristics are NaN
 
- for jj=1 % experiment
+ for jj=1:2 % experiment
      for j=1:numel(state{jj}) % map number
          for i=1:length(networkstate{jj}{j}) % (gh,gsyn) combination
              if state{jj}{j}(i)~=5 % if not a half-center
@@ -178,6 +161,7 @@ end
                  dc{jj}{j}(:,i)=NaN;
                  
                  CVFR{jj}{j}(:,i)=NaN;
+                 meanBurDur{jj}{j}(:,1)=NaN;
              end
          end
      end
@@ -185,7 +169,7 @@ end
 
 %% calculate mean characteristics across two neurons in a circuit
 
-for jj = 1 %:numel(data)
+for jj = 1:2 %:numel(data)
     for j = 1:numel(data{jj}.V)
         ERQall{jj}(j,:) = mean(ERQ{jj}{j});
         FRall{jj}(j,:) = mean(FR{jj}{j});
@@ -225,6 +209,24 @@ mindc = min(dcall{jj}(:)); maxdc = max(dcall{jj}(:));
 
 minCVFR = min(CVFRall{jj}(:)); maxCVFR = max(CVFRall{jj}(:)); 
 
+%% reproduce Figure 4 A-B
+clf
+jj=2; j=5;
+display.genimagesc(ERQmean{jj}{j},gH,gSyn);
+myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(myColorMap);
+if j ==5; h=colorbar; ylabel(h,'ERQ'); end
+caxis([minERQ-0.02 maxERQ+0.02])
+title(['Vth=',num2str(data{jj}.Vth(j))])
+
+xticks([150,300,450,600,750,900,1050]); yticks([150,300,450,600,750,900,1050]);
+xlabel('gSyn, nS'); ylabel('gH, nS'); axis square
+set(gca,'Fontsize',14,'FontName','Arial');
+
+for i=1:10 % create grid
+    line([0 1200], [150*i+75 150*i+75],'color',[0.5 0.5 0.5])
+    line([150*i+75 150*i+75],[0 1200],'color',[0.5 0.5 0.5])
+end
+        
 %% reproduce Figure 4 C-E
 
 jj=1;
@@ -335,7 +337,23 @@ for j=1:5 % map
     end
 end
 
-%% plot CV of the characteristics of the circuit output
+%% plot example traces
+j=1; %experiment
+i=3; %map
+ii=1; % gH,gSyn combination
+x = 1/Fs(j):1/Fs(j):length(data{j}.V{i}{ii}(1,:))/Fs(j);
+clf, plot(x,data{j}.V{i}{ii}(1,:))
+hold on, plot(x,data{j}.V{i}{ii}(2,:))
+data{j}.Vth(i)
+data{j}.gH{i}(ii)
+data{j}.gSyn{i}(ii)
+
+%BurDur{j}{2}{2,1}
+meanBrstDur{j}{i}(:,ii)
+meanBurDur{j}{i}(:,ii)
+
+
+%% plot state, asymmerty in burst duration and ireggularity in cycle frequencu
 
 jj=1;
 gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
@@ -343,51 +361,64 @@ gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
 g=0.04; l=0.07;
 clf,
 
-for j=1:5 % map
-    for i=1%:3 % number of features to display
+for j = 1:5 % map
+    for i=1:3 % number of features to display
+        
+        active1 = reshape(meanBurDur{jj}{j}(1,:),[7,7]);
+        active2 = reshape(meanBurDur{jj}{j}(2,:),[7,7]);
         
         h1=display.bigsubplot(3,5,i,j,g,l);
         
         switch i
             
             case 1
+                display.genimagesc(state{jj}{j}',gH,gSyn);
+                myColorMap = [0.3,0.33,0.35; 0.25,0.4,0.3; 0,0.4,0.5; 0.8,0.5,0.3; 0.6,0.2,0;];
+                colormap(h1,myColorMap);
+                h=colorbar;
+                h.Ticks=[1:5]; h.TickLabels={'silent','asymmetric','irregular\newlinespiking','antiphase\newlinespiking','HCO'}; caxis([1 5]);
+                ylabel('gH');
+                axis square
+                title(['Vth=', num2str(data{jj}.Vth(j)),'mV'])
+                
+            case 2
+                display.genimagesc(abs(active1-active2)',gH,gSyn);
+                myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(h1,myColorMap);
+                colormap(h1,myColorMap);
+                if j ==5; h=colorbar; ylabel(h,'Asymmerty in burst duration, s'); end
+                caxis([-0.1 3])
+                
+            case 3
                 display.genimagesc(CVFRmean{jj}{j},gH,gSyn);
                 myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(h1,myColorMap);
                 if j ==5; h=colorbar; ylabel(h,'CV of cycle frequency'); end
                 %caxis([minCVFR-0.01 maxCVFR+0.01])
-                caxis([minCVFR-0.01 0.15])
+                caxis([minCVFR-0.01 0.2])
                 title(['Vth=',num2str(data{jj}.Vth(j))])
+        end
+        
+        xticks([150,300,450,600,750,900,1050]); yticks([150,300,450,600,750,900,1050]);
+        xlabel('gSyn'); axis square
+        set(gca,'Fontsize',10,'FontName','Arial');
+        
+        for i=1:10 % create grid
+            line([0 1200], [150*i+75 150*i+75],'color',[0.5 0.5 0.5])
+            line([150*i+75 150*i+75],[0 1200],'color',[0.5 0.5 0.5])
         end
     end
 end
 
-%% asymmerty
-
+%% calculate mean asymmetry across the whole map
 jj=1;
-gH = data{jj}.gH{1}; gSyn = data{jj}.gSyn{1};
 
-g=0.04; l=0.07;
-clf,
-
-for j=1:5 % map
-    for i=1%:3 % number of features to display
-        
-        active1 = reshape(active{jj}{j}(1,:),[7,7]);
-        active2 = reshape(active{jj}{j}(2,:),[7,7])
-        h1=display.bigsubplot(3,5,i,j,g,l);
-        
-        switch i
-            
-            case 1
-                display.genimagesc(abs(active1-active2)',gH,gSyn);
-                myColorMap = display.linspecer(128); myColorMap(1,:) = 1; colormap(h1,myColorMap);
-                if j ==5; h=colorbar; ylabel(h,'CV of cycle frequency'); end
-                %caxis([minCVFR-0.01 maxCVFR+0.01])
-                %caxis([minCVFR-0.01 0.15])
-                title(['Vth=',num2str(data{jj}.Vth(j))])
-        end
-    end
+for j=1:5
+    asymm(j) = abs(nanmean(meanBurDur{jj}{j}(1,:))-nanmean(meanBurDur{jj}{j}(2,:)))
 end
+
+clf, plot(asymm,'.-','linewidth',2)
+set(gca,'xtick',[1:1:5])
+set(gca,'xticklabel',data{jj}.Vth)
+ylabel('Synaptic threhold, mV')
 
 %%
 i=8; %experiment
