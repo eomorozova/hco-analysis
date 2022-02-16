@@ -1,8 +1,123 @@
 %% load data from temperature experiments
+% for Figure 7 A-D
+load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig6')
 
-load('C:\Users\moroz\Documents\code\hco_analysis\data\data_temp_pooled.mat')
+%% calculate properties of the circuit output in control and with Imi
+
+N = numel(data.V); % number of experiments
+
+ERQ=cell(1,N); hcostat=cell(1,N);
+FR = cell(N,2); SpkFR = cell(N,2);
+meanFR=cell(1,N); meanSpkFR=cell(1,N);
+
+for i=1:N % experiment
+    i
+    for ii=1:2 % neuron
+        
+        [hcostat{i}{ii}] = analysis.hco_stat(data.V{i}(ii,:),data.Fs(i));
+        
+        FR{i,ii} = 1./hcostat{i}{ii}.T1; % cycle frequency
+        SpkFR{i,ii} = hcostat{i}{ii}.burststat.SpFreq(1:end-1); % spike frequency
+        
+    end
+end
+
+% mean spike frequency across two neurons in a circuit
+for i=1:N
+    if length(SpkFR{i,1})==length(SpkFR{i,2})
+        meanSpkFR{i} = mean([SpkFR{i,1}; SpkFR{i,2}]);
+    elseif length(SpkFR{i,1})>length(SpkFR{i,2})
+        meanSpkFR{i} = mean([SpkFR{i,1}(1:length(SpkFR{i,2})); SpkFR{i,2}]);
+    elseif length(SpkFR{i,1})<length(SpkFR{i,2})
+        meanSpkFR{i} = mean([SpkFR{i,2}(1:length(SpkFR{i,1})); SpkFR{i,1}]);       
+    end
+    
+end
+
+%% calculate change in cycle frequency and spike frequency
+
+Fs=data.Fs(1); % sampling frequency
+
+Temp=cell(1,numel(data.V)); dFR=cell(1,numel(data.V));
+
+ii=1;
+
+for i=1:6
+    
+    t=cumsum(hcostat{i}{ii}.T1)/60;
+    
+    for j=1:length(t)
+        
+        time{i}=1/Fs/60:1/Fs/60:length(data.V{i})/Fs/60;
+        [val,idx]=min(abs(time{i}-t(j)));
+        Temp{i}(j)=data.T{i}(idx);
+        
+        FRbase(i)=mean(FR{i,ii}(Temp{i}>9.5 & Temp{i}<10)); % baseline cycle freqency
+        dFR{i}=(FR{i}-FRbase(i))./FRbase(i)*100; % percent change in cycle frequency
+        
+        SpkFRbase(i)=mean(meanSpkFR{i}(Temp{i}>9.5 & Temp{i}<10)); % baseline spike frequency
+        dSpkFR{i}=(meanSpkFR{i}-SpkFRbase(i))./SpkFRbase(i)*100; % percent change in spike frequecy
+        
+    end
+end
+
+%% reproduce figure 7 A-D
+clf
+% plot percent change in cycle frequency 
+for im=1:2 % mode: release, escape 
+    
+    if im==1 % release
+        subplot(2,4,1); idx = 1:3; col=[.9 .7 .1; .9 .5 .1; .6 .4 .35]; title('Release')
+    else % escape
+        subplot(2,4,2); idx = 4:6; col=[0.36 .42 .6; .6 .4 1; .36 .23 .6]; title('Escape')
+    end % percent change in cycle frequency
+    k=1;
+    for i=idx
+        plot(Temp{i}(1:end-1),smooth(dFR{i}(1:end-1),5),'color',col(k,:,:),'linewidth',3), hold on
+        k=k+1;
+    end
+    
+    ylabel('% \Delta in cycle frequency');
+    xlabel(['Temperature ,' char(176) 'C']);
+    set(gca,'Fontsize',14,'FontName','Arial'); box off;
+    h=display.plothorzline(0); set(h,'linewidth',1,'color','k')
+    ylim([-40 120]); yticks([-40:20:120]);
+    xlim([9.5 20]); xticks([10:2:20]);
+end
+
+% plot percent change in spike frequency with temperature
+for im=1:2
+    
+    if im==1 % release
+        subplot(2,4,3); idx = 1:3; col=[.9 .7 .1; .9 .5 .1; .6 .4 .35]; title('Release')
+    else % escape
+        subplot(2,4,4); idx = 4:6; col=[0.36 .42 .6; .6 .4 1; .36 .23 .6]; title('Escape')
+    end
+    k=1;
+    for i=idx
+            plot(Temp{i}(1:length(dSpkFR{i})-1),smooth(dSpkFR{i}(1:end-1),5),'color',col(k,:,:),'linewidth',3), hold on
+        k=k+1;
+    end
+    
+    ylabel('% \Delta in spike frequency');
+    xlabel(['Temperature ,' char(176) 'C']);
+    set(gca,'Fontsize',14,'FontName','Arial'); box off;
+    h=display.plothorzline(0); set(h,'linewidth',1,'color','k')
+    ylim([-20 160]); yticks([-20:20:160]);
+    xlim([9.5 20]); xticks([10:2:20]);
+end
+
+
+%% load data from temperature experiments 
+%for figure 7 E-H
+
+load('C:\Users\moroz\Documents\code\hco_analysis\data\data_fig7.mat')
 
 %% calculate the charackteristics of the half-center output at 10C and 20C
+
+hcostat=cell(1,numel(data.V));
+FR=zeros(numel(data.V),2,2); SpkFR=zeros(numel(data.V),2,2);
+ERQ=zeros(numel(data.V),2,2); meanFR=zeros(numel(data.V),2); dFR=zeros(1,numel(data.V));
 
 for i=1:numel(data.V)
     i
@@ -100,8 +215,8 @@ for i = 1:size(dpropall,1)
         display.plot_scatter(dFR,groupIdx1,'color',{'k','k','k','k','k','k'},'symbol',symbol,'markersize',30);
         xticks([1,2,3,4,5,6]);
         xticklabels({'q_{10}=1','q_{10}=2 gs','q_{10}=2','q_{10}=1','q_{10}=2 gs','q_{10}=2'});
-        title('% change in cycle frequency')
-        ylabel('% \Delta in cycle freq, Hz');
+        title('change in cycle frequency')
+        ylabel('\Delta in cycle freq, Hz');
         ylim([-0.15 0.45])
         box off; axis square
  
